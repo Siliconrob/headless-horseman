@@ -1,3 +1,4 @@
+import os
 from fastapi.middleware.cors import CORSMiddleware
 from icecream import ic
 from fastapi import FastAPI, HTTPException
@@ -49,9 +50,11 @@ def is_valid_url(url):
 
 
 @app.post("/retrieve_price", tags=["Headless"], include_in_schema=True)
-async def direct_price(target_url: str):
+async def direct_price(target_url: str, watermark: str):
     if not is_valid_url(target_url):
         raise HTTPException(400, detail=f"Invalid url {target_url}")
+    if os.getenv('API_REQUEST') != watermark:
+        raise HTTPException(401)
     response = ic(await scrape_price_url(target_url))
     return response
 
