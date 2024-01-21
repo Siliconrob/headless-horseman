@@ -7,7 +7,9 @@ ic.configureOutput(prefix='|> ')
 
 
 def setup_playwright():
-    return_code = ic(subprocess.run("playwright --version", shell=True, capture_output=True))
+    result = ic(subprocess.run("playwright --version", shell=True, capture_output=True))
+    if result.returncode != 0:
+        ic(subprocess.run("playwright install", shell=True, capture_output=True))
 
 
 if __name__ == "__main__":
