@@ -4,7 +4,7 @@ from icecream import ic
 from fastapi import FastAPI, HTTPException
 from urllib.parse import urlparse
 from starlette.responses import RedirectResponse
-
+from pydantic import BaseModel
 from core.runner import scrape_price_url
 from middlewares.exceptionhandler import ExceptionHandlerMiddleware
 
@@ -13,6 +13,11 @@ ic.configureOutput(prefix='|> ')
 tags_metadata = [
     {"name": "Headless", "description": "For headless operations"},
 ]
+
+
+class RequestTarget(BaseModel):
+    target_url: str
+    watermark: str
 
 app = FastAPI(title="Headless Horseman",
               description="A drowsy, dreamy influence seems to hang over the land, and to pervade the very atmosphere",
@@ -50,12 +55,12 @@ def is_valid_url(url):
 
 
 @app.post("/retrieve_price", tags=["Headless"], include_in_schema=True)
-async def direct_price(target_url: str, watermark: str):
-    if not is_valid_url(target_url):
-        raise HTTPException(400, detail=f"Invalid url {target_url}")
-    if os.getenv('API_REQUEST') != watermark:
+async def direct_price(target: RequestTarget):
+    if not is_valid_url(target.target_url):
+        raise HTTPException(400, detail=f"Invalid url {target.target_url}")
+    if os.getenv('API_REQUEST') != target.watermark:
         raise HTTPException(401)
-    response = ic(await scrape_price_url(target_url))
+    response = ic(await scrape_price_url(target.target_url))
     return response
 
 
