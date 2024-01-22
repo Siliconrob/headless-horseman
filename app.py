@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from icecream import ic
 from fastapi import FastAPI, HTTPException
 from urllib.parse import urlparse
-from starlette.responses import RedirectResponse
+from starlette.responses import RedirectResponse, JSONResponse
 from pydantic import BaseModel
 from core.runner import scrape_price_url
 from middlewares.exceptionhandler import ExceptionHandlerMiddleware
@@ -62,7 +62,7 @@ async def direct_price(target: RequestTarget):
         raise HTTPException(401)
     ic(target)
     response = ic(await scrape_price_url(target.target_url))
-    return response
+    return { "result": response }
 
 
 @app.get("/", tags=["Headless"], include_in_schema=False)

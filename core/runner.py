@@ -12,7 +12,7 @@ async def intercept_response(current_response):
     global response_cache
     global request_id
     if current_response.request.url.startswith("https://secure.ownerrez.com/widgets/quote"):
-        response_cache[request_id] = await current_response.json()
+        response_cache[request_id] = ic(await current_response.json())
     return current_response
 
 
