@@ -60,6 +60,7 @@ async def direct_price(target: RequestTarget):
         raise HTTPException(400, detail=f"Invalid url {target.target_url}")
     if os.getenv('API_REQUEST') != target.watermark:
         raise HTTPException(401)
+    ic(target)
     response = ic(await scrape_price_url(target.target_url))
     return response
 

@@ -3,7 +3,7 @@ from playwright.async_api import async_playwright
 import cachetools
 from icecream import ic
 
-response_cache = cachetools.TTLCache(maxsize=32, ttl=5)
+response_cache = cachetools.TTLCache(maxsize=32, ttl=30)
 request_id = None
 ic.configureOutput(prefix='|> ')
 
