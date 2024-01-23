@@ -25,8 +25,7 @@ async def scrape_price_url(target_url: str):
     request_id = ic(str(uuid.uuid4()))
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=True)
-        context = await browser.new_context()
-        await context.set_extra_http_headers(headers={header_identifier: request_id})
+        context = await browser.new_context(extra_http_headers={header_identifier: request_id})
         page = await context.new_page()
         page.on("response", intercept_response)
         await page.goto(target_url)
