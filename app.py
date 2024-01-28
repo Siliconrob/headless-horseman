@@ -19,6 +19,7 @@ class RequestTarget(BaseModel):
     target_url: str
     watermark: str
 
+
 app = FastAPI(title="Headless Horseman",
               description="A drowsy, dreamy influence seems to hang over the land, and to pervade the very atmosphere",
               version="0.0.1",
@@ -62,7 +63,7 @@ async def direct_price(target: RequestTarget):
         raise HTTPException(401)
     ic(target)
     response = ic(await scrape_price_url(target.target_url))
-    return { "result": response }
+    return dict(result=response)
 
 
 @app.get("/", tags=["Headless"], include_in_schema=False)
