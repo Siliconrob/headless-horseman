@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+import re
+
 from icecream import ic
 
 ic.configureOutput(prefix='|> ')
@@ -23,12 +25,13 @@ def extract_text_content(input_text: str):
 def extract_from_date_line(date_line: str) -> (str, str):
     if date_line is None or len(date_line) == 0:
         return None, None
-    date_split = date_line.split('–')
+
+    date_split = re.split(r',|–', date_line)
     if len(date_split) != 2:
         return None, None
 
     reviewer_name = date_split[0].replace("By", "").strip()
-    review_date = date_split[1].replace("stayed", "").strip()
+    review_date = date_split[1].replace("stayed", "").replace("   ", "").strip()
 
     return review_date, reviewer_name
 

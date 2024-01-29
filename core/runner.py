@@ -51,7 +51,7 @@ async def extract_reviews(iframe_content) -> list[Review]:
 async def scrape_reviews_url(target_url: str):
     reviews_content = []
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=False)
+        browser = await pw.chromium.launch(headless=True)
         context = await browser.new_context()
         page = await context.new_page()
         await page.goto(target_url)
