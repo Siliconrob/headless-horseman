@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException
 from urllib.parse import urlparse
 from starlette.responses import RedirectResponse, JSONResponse
 from pydantic import BaseModel
-from core.runner import scrape_price_url
+from core.runner import scrape_price_url, scrape_reviews_url
 from middlewares.exceptionhandler import ExceptionHandlerMiddleware
 
 ic.configureOutput(prefix='|> ')
@@ -63,6 +63,17 @@ async def direct_price(target: RequestTarget):
         raise HTTPException(401)
     ic(target)
     response = ic(await scrape_price_url(target.target_url))
+    return dict(result=response)
+
+
+@app.post("/retrieve_reviews", tags=["Headless"], include_in_schema=True)
+async def direct_price(target: RequestTarget):
+    if not is_valid_url(target.target_url):
+        raise HTTPException(400, detail=f"Invalid url {target.target_url}")
+    if os.getenv('API_REQUEST') != target.watermark:
+        raise HTTPException(401)
+    ic(target)
+    response = ic(await scrape_reviews_url(target.target_url))
     return dict(result=response)
 
 
