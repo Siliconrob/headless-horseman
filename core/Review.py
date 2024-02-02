@@ -50,6 +50,7 @@ def extract_from_content_line(content) -> (str, str):
         review_response = None
     return review_content, review_response
 
+
 def parse_review(review_html) -> Review:
     review_data = None
     try:
