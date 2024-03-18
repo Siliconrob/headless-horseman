@@ -54,10 +54,9 @@ def extract_table_detail(table_element, table_section_tag: str):
     return details
 
 
-
-async def extract_pricing(page_content, target_url):
+def extract_pricing(page_content, target_url):
     parsed_results = {}
-    soup = BeautifulSoup(await page_content, "html.parser")
+    soup = BeautifulSoup(page_content, "html.parser")
     page_cards = soup.find_all("div", {"class": ["card-body"]})
     for page_card in page_cards:
         inner_table = page_card.find("table", {"class": ["table"]})
@@ -91,7 +90,7 @@ def get_duration(target_url):
 async def scrape_price_url(target_url: str):
     global response_cache
     request_id = ic(str(uuid.uuid4()))
-    use_interceptor = not target_url.startswith("https://booking.ownerrez.com/request")
+    use_interceptor = ic(not target_url.startswith("https://booking.ownerrez.com/request"))
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=True)
         context = await browser.new_context(extra_http_headers={header_identifier: request_id})
@@ -101,7 +100,8 @@ async def scrape_price_url(target_url: str):
         await page.goto(target_url)
         await page.wait_for_load_state(wait_action)
         if not use_interceptor:
-            response_cache[request_id] = ic(await extract_pricing(page.content(), target_url))
+            page_contents = await page.content()
+            response_cache[request_id] = ic(extract_pricing(page_contents, target_url))
         await browser.close()
     return response_cache.get(ic(request_id), default=None)
 
