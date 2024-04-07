@@ -1,12 +1,14 @@
 import os
 from fastapi.middleware.cors import CORSMiddleware
 from icecream import ic
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Form, UploadFile, File
 from urllib.parse import urlparse
 from starlette.responses import RedirectResponse, JSONResponse
 from pydantic import BaseModel
 from core.runner import scrape_price_url, scrape_reviews_url
 from middlewares.exceptionhandler import ExceptionHandlerMiddleware
+from quick_xmltodict import parse
+from typing import Annotated
 
 ic.configureOutput(prefix='|> ')
 
@@ -53,6 +55,24 @@ def is_valid_url(url):
         return True
     except ValueError:
         return False
+
+
+@app.post("/convert", tags=["Headless"], include_in_schema=True)
+async def direct_price(input_data: Annotated[str, Form()]):
+    ic(input_data)
+    parsed_xml_dict = parse(input_data)
+    return dict(result=parsed_xml_dict)
+
+
+@app.post("/convert_file", tags=["Headless"], include_in_schema=True)
+async def direct_price(upload_file: Annotated[UploadFile, File()]):
+    if upload_file.content_type not in ["text/xml"]:
+        raise HTTPException(400, detail=f"File {upload_file.filename} must be an XML file not [{upload_file.content_type}]")
+    contents = str(upload_file.file.read())
+    ic(contents)
+    parsed_xml_dict = parse(contents)
+    return dict(result=parsed_xml_dict)
+
 
 
 @app.post("/retrieve_price", tags=["Headless"], include_in_schema=True)
