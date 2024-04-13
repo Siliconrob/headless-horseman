@@ -1,6 +1,5 @@
 import urllib
 import uuid
-
 import pendulum
 from price_parser import Price
 from bs4 import BeautifulSoup
@@ -8,7 +7,7 @@ from playwright.async_api import async_playwright
 import cachetools
 from icecream import ic
 from urllib.parse import urlparse
-from core.Review import Review, parse_review
+from core.Review import Review, parse_review, extract_review_page_links
 
 response_cache = cachetools.TTLCache(maxsize=32, ttl=30)
 ic.configureOutput(prefix='|> ')
@@ -106,9 +105,9 @@ async def scrape_price_url(target_url: str):
     return response_cache.get(ic(request_id), default=None)
 
 
-async def extract_reviews(iframe_content) -> list[Review]:
+def extract_reviews(iframe_content) -> list[Review]:
     parsed_results = []
-    soup = BeautifulSoup(await iframe_content.content(), "html.parser")
+    soup = BeautifulSoup(iframe_content, "html.parser")
     reviews = soup.find_all("div", {"class": ["review-item"]})
     for review in reviews:
         extracted_review = parse_review(review)
@@ -119,14 +118,22 @@ async def extract_reviews(iframe_content) -> list[Review]:
 
 async def scrape_reviews_url(target_url: str):
     reviews_content = []
+    secure_base_url = "https://secure.ownerrez.com"
+    base_widget_url = f"{secure_base_url}/widgets"
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=True)
         context = await browser.new_context()
         page = await context.new_page()
         await page.goto(target_url)
         await page.wait_for_load_state(wait_action)
+        review_links_to_visit = []
         for iframe in page.frames:
-            if iframe.url.startswith("https://secure.ownerrez.com/widgets"):
-                reviews_content = await extract_reviews(iframe)
+            if iframe.url.startswith(base_widget_url):
+                page_content = await iframe.content()
+                review_links_to_visit = extract_review_page_links(page_content, secure_base_url)
+        for review_link_to_visit in set(review_links_to_visit):
+            await page.goto(ic(review_link_to_visit))
+            reviews_content.extend(extract_reviews(await page.content()))
         await browser.close()
+        ic(f'Extracted reviews count {len(reviews_content)}')
     return reviews_content
