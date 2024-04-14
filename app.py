@@ -1,4 +1,6 @@
 import os
+
+from async_lru import alru_cache
 from fastapi.middleware.cors import CORSMiddleware
 from icecream import ic
 from fastapi import FastAPI, HTTPException, Form, UploadFile, File
@@ -58,21 +60,21 @@ def is_valid_url(url):
 
 
 @app.post("/convert", tags=["Headless"], include_in_schema=True)
-async def direct_price(input_data: Annotated[str, Form()]):
+async def convert(input_data: Annotated[str, Form()]):
     ic(input_data)
     parsed_xml_dict = parse(input_data)
     return dict(result=parsed_xml_dict)
 
 
 @app.post("/convert_file", tags=["Headless"], include_in_schema=True)
-async def direct_price(upload_file: Annotated[UploadFile, File()]):
+async def convert_file(upload_file: Annotated[UploadFile, File()]):
     if upload_file.content_type not in ["text/xml"]:
-        raise HTTPException(400, detail=f"File {upload_file.filename} must be an XML file not [{upload_file.content_type}]")
+        raise HTTPException(400,
+                            detail=f"File {upload_file.filename} must be an XML file not [{upload_file.content_type}]")
     contents = str(upload_file.file.read())
     ic(contents)
     parsed_xml_dict = parse(contents)
     return dict(result=parsed_xml_dict)
-
 
 
 @app.post("/retrieve_price", tags=["Headless"], include_in_schema=True)
@@ -86,8 +88,9 @@ async def direct_price(target: RequestTarget):
     return dict(result=response)
 
 
+@alru_cache(ttl=600)
 @app.post("/retrieve_reviews", tags=["Headless"], include_in_schema=True)
-async def direct_price(target: RequestTarget):
+async def direct_reviews(target: RequestTarget):
     if not is_valid_url(target.target_url):
         raise HTTPException(400, detail=f"Invalid url {target.target_url}")
     if os.getenv('API_REQUEST') != target.watermark:
