@@ -8,6 +8,7 @@ import cachetools
 from icecream import ic
 from urllib.parse import urlparse
 from core.Review import Review, parse_review, extract_review_page_links
+from async_lru import alru_cache
 
 response_cache = cachetools.TTLCache(maxsize=32, ttl=30)
 ic.configureOutput(prefix='|> ')
@@ -116,6 +117,7 @@ def extract_reviews(iframe_content) -> list[Review]:
     return parsed_results
 
 
+@alru_cache(ttl=600)
 async def scrape_reviews_url(target_url: str):
     reviews_content = []
     secure_base_url = "https://secure.ownerrez.com"
