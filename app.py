@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, Form, UploadFile, File
 from urllib.parse import urlparse
 from starlette.responses import RedirectResponse, JSONResponse
 from pydantic import BaseModel
-from core.runner import scrape_price_url, scrape_reviews_url
+from core.runner import scrape_price_url, scrape_reviews_url, scrape_properties_url
 from middlewares.exceptionhandler import ExceptionHandlerMiddleware
 from quick_xmltodict import parse
 from typing import Annotated
@@ -97,6 +97,18 @@ async def direct_reviews(target: RequestTarget):
         raise HTTPException(401)
     ic(target)
     response = ic(await scrape_reviews_url(target.target_url))
+    return dict(result=response)
+
+
+@alru_cache(ttl=600)
+@app.post("/retrieve_properties", tags=["Headless"], include_in_schema=True)
+async def direct_properties(target: RequestTarget):
+    if not is_valid_url(target.target_url):
+        raise HTTPException(400, detail=f"Invalid url {target.target_url}")
+    if os.getenv('API_REQUEST') != target.watermark:
+        raise HTTPException(401)
+    ic(target)
+    response = ic(await scrape_properties_url(target.target_url))
     return dict(result=response)
 
 

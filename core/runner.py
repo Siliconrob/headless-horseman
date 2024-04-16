@@ -7,6 +7,8 @@ from playwright.async_api import async_playwright
 import cachetools
 from icecream import ic
 from urllib.parse import urlparse
+
+from core.Property import extract_paged_properties
 from core.Review import Review, parse_review, extract_review_page_links
 from async_lru import alru_cache
 
@@ -115,6 +117,21 @@ def extract_reviews(iframe_content) -> list[Review]:
         if extracted_review is not None:
             parsed_results.append(extracted_review)
     return parsed_results
+
+
+@alru_cache(ttl=600)
+async def scrape_properties_url(target_url: str):
+    properties_content = []
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch(headless=True)
+        context = await browser.new_context()
+        page = await context.new_page()
+        await page.goto(target_url)
+        await page.wait_for_load_state(wait_action)
+        properties_content = await extract_paged_properties(page, target_url)
+        await browser.close()
+        ic(f'Extracted properties count {len(properties_content)}')
+    return properties_content
 
 
 @alru_cache(ttl=600)
