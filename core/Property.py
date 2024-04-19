@@ -17,6 +17,7 @@ class Property:
     full_bathrooms: int = 0
     half_bathrooms: int = 0
     photo_url: str = None
+    property_url: str = None
     amenities: list = field(default_factory=list[str])
 
 
@@ -33,6 +34,7 @@ async def extract_properties(page, base_url: str, page_index: int) -> list[Prope
     for property_page_tile in property_page_tile:
         title = property_page_tile.find("span", {"class": ["h3", "media-heading"]}).text
         extracted = Property(title)
+        extracted.property_url = f'{base_url}{property_page_tile.get("href")}'
         extracted.photo_url = property_page_tile.find("img").get("src")
         extracted.amenities = [z.get("data-original-title") for z in property_page_tile.find_all("span", {"class": ["amenity-list-item"]})]
         details_line = property_page_tile.find("span", {"class": ["caption"]}).text.strip()
