@@ -23,7 +23,7 @@ class Property:
 
 async def extract_properties(page, base_url: str, page_index: int) -> list[Property]:
     extracted_properties = []
-    if (page_index == 0):
+    if page_index == 0:
         return extracted_properties
     url_to_visit = f'{base_url}?page={page_index}'
     await page.goto(url_to_visit)
@@ -36,7 +36,8 @@ async def extract_properties(page, base_url: str, page_index: int) -> list[Prope
         extracted = Property(title)
         extracted.property_url = f'{base_url}{property_page_tile.get("href")}'
         extracted.photo_url = property_page_tile.find("img").get("src")
-        extracted.amenities = [z.get("data-original-title") for z in property_page_tile.find_all("span", {"class": ["amenity-list-item"]})]
+        extracted.amenities = [z.get("data-original-title") for z in
+                               property_page_tile.find_all("span", {"class": ["amenity-list-item"]})]
         details_line = property_page_tile.find("span", {"class": ["caption"]}).text.strip()
         numbers = re.findall(r'\d+', details_line)
         values = list(map(int, numbers))
