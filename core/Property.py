@@ -21,18 +21,12 @@ class Property:
     amenities: list = field(default_factory=list[str])
 
 
-async def extract_properties(page, base_url: str, page_index: int) -> list[Property]:
+async def extract_properties(page_contents, base_url: str) -> list[Property]:
     extracted_properties = []
-    if page_index == 0:
-        return extracted_properties
-    url_to_visit = f'{base_url}?page={page_index}'
-    await page.goto(url_to_visit)
-    await page.wait_for_load_state(wait_action)
-    page_contents = await page.content()
     soup = BeautifulSoup(page_contents, "html.parser")
     property_page_tile = soup.find_all("a", {"class": ["property-result-tile"]})
     for property_page_tile in property_page_tile:
-        title = property_page_tile.find("span", {"class": ["h3", "media-heading"]}).text
+        title = property_page_tile.select('span.h3.media-heading').pop().text
         extracted = Property(title)
         extracted.property_url = f'{base_url}{property_page_tile.get("href")}'
         extracted.photo_url = property_page_tile.find("img").get("src")
@@ -60,11 +54,18 @@ async def extract_paged_properties(page, base_url: str) -> list[Property]:
     soup = BeautifulSoup(page_contents, "html.parser")
     property_pager_links = soup.find_all("a", {"class": ["result-page"]})
     if len(property_pager_links) == 0:
+        properties.extend(await extract_properties(page_contents, base_url))
         return properties
 
     page_ids = parsed_property_ids(property_pager_links)
     for page_id in page_ids:
-        properties.extend(await extract_properties(page, base_url, page_id))
+        if page_id == 0:
+            continue
+        url_to_visit = f'{base_url}?page={page_id}'
+        await page.goto(url_to_visit)
+        await page.wait_for_load_state(wait_action)
+        page_contents = await page.content()
+        properties.extend(await extract_properties(page_contents, base_url))
     return properties
 
 

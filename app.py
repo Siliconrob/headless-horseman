@@ -123,8 +123,8 @@ async def direct_reviews(target: RequestTarget):
         raise HTTPException(400, detail=f"Invalid url {target.target_url}")
     if os.getenv('API_REQUEST') != target.watermark:
         raise HTTPException(401)
-    ic(target)
-    response = ic(await scrape_reviews_url(target.target_url))
+    reviews_url = ic(fill_in_target_url(target, "reviews"))
+    response = ic(await scrape_reviews_url(reviews_url))
     return dict(result=response)
 
 
@@ -135,9 +135,20 @@ async def direct_properties(target: RequestTarget):
         raise HTTPException(400, detail=f"Invalid url {target.target_url}")
     if os.getenv('API_REQUEST') != target.watermark:
         raise HTTPException(401)
-    ic(target)
-    response = ic(await scrape_properties_url(target.target_url))
+    property_url = ic(fill_in_target_url(target, "properties"))
+    response = ic(await scrape_properties_url(property_url))
     return dict(result=response)
+
+
+def fill_in_target_url(target: RequestTarget, action_path: str) -> str:
+    target_url = target.target_url
+    parsed_url = urlparse(target_url)
+    if parsed_url.scheme not in ["http", "https"]:
+        target_url = f"https://{target_url}"
+    parsed_url = urlparse(target_url)
+    if not parsed_url.path.startswith(f'/{action_path}'):
+        target_url = f"{target_url}/{action_path}"
+    return target_url
 
 
 @app.get("/", tags=["Headless"], include_in_schema=False)
