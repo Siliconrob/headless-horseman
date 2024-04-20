@@ -1,16 +1,17 @@
 import os
-
+from datetime import date
+from typing import Annotated
+import pendulum
 from async_lru import alru_cache
 from fastapi.middleware.cors import CORSMiddleware
 from icecream import ic
 from fastapi import FastAPI, HTTPException, Form, UploadFile, File
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlencode
 from starlette.responses import RedirectResponse, JSONResponse
 from pydantic import BaseModel
 from core.runner import scrape_price_url, scrape_reviews_url, scrape_properties_url
 from middlewares.exceptionhandler import ExceptionHandlerMiddleware
 from quick_xmltodict import parse
-from typing import Annotated
 
 ic.configureOutput(prefix='|> ')
 
@@ -75,6 +76,33 @@ async def convert_file(upload_file: Annotated[UploadFile, File()]):
     ic(contents)
     parsed_xml_dict = parse(contents)
     return dict(result=parsed_xml_dict)
+
+
+@alru_cache(ttl=60)
+@app.get("/get_price/{property_id}", tags=["Headless"], include_in_schema=True)
+async def get_price(property_id: Annotated[str, "Property ID"],
+                    arrival: Annotated[date, "Arrival"] = pendulum.now().add(months=1).to_date_string(),
+                    departure: Annotated[date, "Departure"] = pendulum.now().add(months=1, weeks=1).to_date_string(),
+                    adults: Annotated[int, "Adults"] = 1,
+                    children: Annotated[int, "Children"] = 0,
+                    watermark: Annotated[str, "Watermark"] = ""):
+    if os.getenv('API_REQUEST') != watermark:
+        raise HTTPException(401)
+    if arrival >= departure:
+        raise HTTPException(400, detail=f'Arrival {arrival} is greater than Departure {departure}')
+    if adults < 1:
+        raise HTTPException(400, detail=f'Adults {adults} is less than minimum value of 1')
+
+    url_request_params = {
+        'property': property_id,
+        'arrival': arrival.isoformat(),
+        'departure': departure.isoformat(),
+        'adults': adults,
+        'children': children
+    }
+    target_url = ic(f'https://booking.ownerrez.com/request?{urlencode(url_request_params)}')
+    response = ic(await scrape_price_url(target_url))
+    return dict(result=response)
 
 
 @app.post("/retrieve_price", tags=["Headless"], include_in_schema=True)

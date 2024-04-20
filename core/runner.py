@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 from core.Property import extract_paged_properties
 from core.Review import Review, parse_review, extract_review_page_links
 from async_lru import alru_cache
+from parse import parse
 
 response_cache = cachetools.TTLCache(maxsize=32, ttl=30)
 ic.configureOutput(prefix='|> ')
@@ -60,6 +61,12 @@ def extract_pricing(page_content, target_url):
     parsed_results = {}
     soup = BeautifulSoup(page_content, "html.parser")
     page_cards = soup.find_all("div", {"class": ["card-body"]})
+    parsed_results["property"] = extract_property_details({
+        "property_img": soup.find("div", {"class": ["card-img-top"]}),
+        "property_header": soup.find("h5", {"class": ["card-title"]}),
+        "property_location": soup.find("h6", {"class": ["card-subtitle"]}),
+    })
+
     for page_card in page_cards:
         inner_table = page_card.find("table", {"class": ["table"]})
         if inner_table is None:
@@ -78,6 +85,31 @@ def extract_pricing(page_content, target_url):
         break
 
     return parsed_results
+
+
+def extract_property_details(property_elements: dict) -> dict:
+    property_details = {}
+    if property_elements.get("property_img") is not None:
+        div_style = property_elements.get("property_img").get("style")
+        result = parse("background-image:url({url});", div_style)
+        property_details["image"] = result["url"]
+    if property_elements.get("property_header") is not None:
+        property_details["title"] = property_elements.get("property_header").text
+    if property_elements.get("property_location") is not None:
+        property_details["location"] = extract_address(property_elements.get("property_location").text)
+    return property_details
+
+
+def extract_address(address_text: str) -> dict:
+    if address_text is None or address_text == "":
+        return None
+    location_pieces = dict(enumerate(map(str, address_text.split(","))))
+    address = {
+        "city": location_pieces.get(0).strip() if location_pieces.get(0) is not None else None,
+        "state": location_pieces.get(1).strip() if location_pieces.get(1) is not None else None,
+        "country": location_pieces.get(2).strip() if location_pieces.get(2) is not None else None,
+    }
+    return address
 
 
 def get_duration(target_url):
