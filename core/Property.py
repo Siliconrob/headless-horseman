@@ -21,11 +21,9 @@ class Property:
     amenities: list = field(default_factory=list[str])
 
 
-async def extract_properties(page_contents, base_url: str) -> list[Property]:
-    extracted_properties = []
-    soup = BeautifulSoup(page_contents, "html.parser")
-    property_page_tile = soup.find_all("a", {"class": ["property-result-tile"]})
-    for property_page_tile in property_page_tile:
+def extract_from_tiles(property_page_tiles, base_url: str) -> list[Property]:
+    tile_properties = []
+    for property_page_tile in property_page_tiles:
         title = property_page_tile.select('span.h3.media-heading').pop().text
         extracted = Property(title)
         extracted.property_url = f'{base_url}{property_page_tile.get("href")}'
@@ -44,7 +42,58 @@ async def extract_properties(page_contents, base_url: str) -> list[Property]:
             extracted.full_bathrooms = values[3]
         if len(values) > 4:
             extracted.half_bathrooms = values[4]
-        extracted_properties.append(extracted)
+        tile_properties.append(extracted)
+    return tile_properties
+
+
+def extract_from_list(property_page_list, base_url) -> list[Property]:
+    list_properties = []
+    if len(property_page_list) == 0:
+        return list_properties
+
+    property_list_rows = property_page_list[0].find_all("div", {"class": "row"})
+    for property_list_row in property_list_rows:
+        sections = property_list_row.find_all("div")
+        if len(sections) == 0:
+            continue
+        extracted = Property()
+        link_section = sections[0]
+        description_section = sections[1]
+
+        if link_section is not None:
+            photo_link = link_section.find("img", {"class": "media-object"})
+            if photo_link is not None:
+                extracted.photo_url = photo_link.get("src")
+            header = link_section.find("h2", {"class": "media-heading"})
+            if header is not None:
+                title_link = header.find("a")
+                extracted.title = title_link.text
+                extracted.property_url = f'{base_url}{title_link.get("href")}'
+
+        extracted.amenities = [z.get("data-original-title") for z in description_section.find_all("span", {"class": ["amenity-list-item"]})]
+        # details_line = property_page_tile.find("span", {"class": ["caption"]}).text.strip()
+        # numbers = re.findall(r'\d+', details_line)
+        # values = list(map(int, numbers))
+        # extracted.sleeps = values[0]
+        # if len(values) > 1:
+        #     extracted.bedrooms = values[1]
+        # if len(values) > 2:
+        #     extracted.bathrooms = values[2]
+        # if len(values) > 3:
+        #     extracted.full_bathrooms = values[3]
+        # if len(values) > 4:
+        #     extracted.half_bathrooms = values[4]
+        list_properties.append(extracted)
+    return list_properties
+
+
+async def extract_properties(page_contents, base_url: str) -> list[Property]:
+    extracted_properties = []
+    soup = BeautifulSoup(page_contents, "html.parser")
+    property_page_tiles = soup.find_all("a", {"class": ["property-result-tile"]})
+    extracted_properties.append(extract_from_tiles(property_page_tiles, base_url))
+    property_page_list = soup.find_all("div", {"class": ["property-result-list"]})
+    extracted_properties.append(extract_from_list(property_page_list, base_url))
     return extracted_properties
 
 
@@ -57,8 +106,7 @@ async def extract_paged_properties(page, base_url: str) -> list[Property]:
         properties.extend(await extract_properties(page_contents, base_url))
         return properties
 
-    page_ids = parsed_property_ids(property_pager_links)
-    for page_id in page_ids:
+    for page_id in set(parsed_property_ids(property_pager_links)):
         if page_id == 0:
             continue
         url_to_visit = f'{base_url}?page={page_id}'

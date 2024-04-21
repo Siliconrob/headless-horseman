@@ -128,7 +128,7 @@ async def direct_reviews(target: RequestTarget):
     return dict(result=response)
 
 
-@alru_cache(ttl=600)
+# @alru_cache(ttl=600)
 @app.post("/retrieve_properties", tags=["Headless"], include_in_schema=True)
 async def direct_properties(target: RequestTarget):
     if not is_valid_url(target.target_url):
