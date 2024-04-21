@@ -46,6 +46,32 @@ def extract_from_tiles(property_page_tiles, base_url: str) -> list[Property]:
     return tile_properties
 
 
+def extract_amenities(amenities_parent) -> list[str]:
+    amenities = [z.text if z.get("data-original-title") is None else z.get("data-original-title") for z in
+                 amenities_parent.find_all("span", {"class": ["amenity-list-item"]})]
+    return list(map(extract_amenity, amenities))
+
+
+def extract_amenity(amenity_text: str) -> str:
+    replacements = [
+        ("\n", ""),
+        (",", "")
+    ]
+    [amenity_text := amenity_text.replace(a, b) for a, b in replacements]
+    return amenity_text.strip()
+
+
+def extract_size(size_div) -> dict[str, str]:
+    elements_text = []
+    for element in size_div.children:
+        size_detail_line = element.text.strip()
+        numbers = re.findall(r'\d+', size_detail_line)
+        if len(numbers) == 0:
+            continue
+        elements_text.append(int(max(numbers)))
+    return elements_text
+
+
 def extract_from_list(property_page_list, base_url) -> list[Property]:
     list_properties = []
     if len(property_page_list) == 0:
@@ -69,20 +95,14 @@ def extract_from_list(property_page_list, base_url) -> list[Property]:
                 title_link = header.find("a")
                 extracted.title = title_link.text
                 extracted.property_url = f'{base_url}{title_link.get("href")}'
-
-        extracted.amenities = [z.get("data-original-title") for z in description_section.find_all("span", {"class": ["amenity-list-item"]})]
-        # details_line = property_page_tile.find("span", {"class": ["caption"]}).text.strip()
-        # numbers = re.findall(r'\d+', details_line)
-        # values = list(map(int, numbers))
-        # extracted.sleeps = values[0]
-        # if len(values) > 1:
-        #     extracted.bedrooms = values[1]
-        # if len(values) > 2:
-        #     extracted.bathrooms = values[2]
-        # if len(values) > 3:
-        #     extracted.full_bathrooms = values[3]
-        # if len(values) > 4:
-        #     extracted.half_bathrooms = values[4]
+        extracted.amenities = extract_amenities(description_section)
+        extracted_size = extract_size(description_section.find("div", {"class": "amenity-summary-size"}))
+        if len(extracted_size) > 0:
+            extracted.bedrooms = extracted_size[0]
+        if len(extracted_size) > 1:
+            extracted.bathrooms = extracted_size[1]
+        if len(extracted_size) > 3:
+            extracted.sleeps = extracted_size[3]
         list_properties.append(extracted)
     return list_properties
 
@@ -91,9 +111,13 @@ async def extract_properties(page_contents, base_url: str) -> list[Property]:
     extracted_properties = []
     soup = BeautifulSoup(page_contents, "html.parser")
     property_page_tiles = soup.find_all("a", {"class": ["property-result-tile"]})
-    extracted_properties.append(extract_from_tiles(property_page_tiles, base_url))
+    tile_properties = extract_from_tiles(property_page_tiles, base_url)
+    if len(tile_properties) > 0:
+        extracted_properties.append(tile_properties)
     property_page_list = soup.find_all("div", {"class": ["property-result-list"]})
-    extracted_properties.append(extract_from_list(property_page_list, base_url))
+    list_properties = extract_from_list(property_page_list, base_url)
+    if len(list_properties) > 0:
+        extracted_properties.append(list_properties)
     return extracted_properties
 
 
