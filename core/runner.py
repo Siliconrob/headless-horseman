@@ -151,7 +151,7 @@ def extract_reviews(iframe_content) -> list[Review]:
     return parsed_results
 
 
-# @alru_cache(ttl=600)
+@alru_cache(ttl=600)
 async def scrape_properties_url(target_url: str):
     properties_content = []
     async with async_playwright() as pw:
