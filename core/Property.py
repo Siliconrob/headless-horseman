@@ -113,11 +113,11 @@ async def extract_properties(page_contents, base_url: str) -> list[Property]:
     property_page_tiles = soup.find_all("a", {"class": ["property-result-tile"]})
     tile_properties = extract_from_tiles(property_page_tiles, base_url)
     if len(tile_properties) > 0:
-        extracted_properties.append(tile_properties)
+        extracted_properties.extend(tile_properties)
     property_page_list = soup.find_all("div", {"class": ["property-result-list"]})
     list_properties = extract_from_list(property_page_list, base_url)
     if len(list_properties) > 0:
-        extracted_properties.append(list_properties)
+        extracted_properties.extend(list_properties)
     return extracted_properties
 
 
