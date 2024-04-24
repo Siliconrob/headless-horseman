@@ -18,13 +18,14 @@ ic.configureOutput(prefix='|> ')
 
 header_identifier = 'X-Forwarded-Host'
 wait_action = 'networkidle'
+base_target_url = 'https://secure.ownerrez.com'
 
 
 async def intercept_response(current_response):
     global response_cache
     target_request = current_response.request
     if target_request.method == "GET":
-        if target_request.url.startswith("https://secure.ownerrez.com/widgets/quote"):
+        if target_request.url.startswith(f'{base_target_url}/widgets/quote'):
             request_id = ic(await target_request.header_value(header_identifier))
             response_cache[request_id] = ic(await current_response.json())
             return current_response
@@ -169,8 +170,7 @@ async def scrape_properties_url(target_url: str):
 @alru_cache(ttl=600)
 async def scrape_reviews_url(target_url: str):
     reviews_content = []
-    secure_base_url = "https://secure.ownerrez.com"
-    base_widget_url = f"{secure_base_url}/widgets"
+    base_widget_url = f"{base_target_url}/widgets"
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=True)
         context = await browser.new_context()
@@ -181,7 +181,7 @@ async def scrape_reviews_url(target_url: str):
         for iframe in page.frames:
             if iframe.url.startswith(base_widget_url):
                 page_content = await iframe.content()
-                review_links_to_visit = extract_review_page_links(page_content, secure_base_url)
+                review_links_to_visit = extract_review_page_links(page_content, base_target_url)
         for review_link_to_visit in set(review_links_to_visit):
             await page.goto(ic(review_link_to_visit))
             reviews_content.extend(extract_reviews(await page.content()))
