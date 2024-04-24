@@ -18,7 +18,7 @@ ic.configureOutput(prefix='|> ')
 
 header_identifier = 'X-Forwarded-Host'
 wait_action = 'networkidle'
-base_target_url = 'https://secure.ownerrez.com'
+base_target_url = 'https://app.ownerrez.com'
 
 
 async def intercept_response(current_response):
