@@ -141,7 +141,7 @@ async def scrape_price_url(target_url: str):
     return response_cache.get(ic(request_id), default=None)
 
 
-@alru_cache(ttl=600)
+@alru_cache(ttl=3600)
 async def extract_reviews(iframe_content) -> list[Review]:
     parsed_results = []
     soup = BeautifulSoup(iframe_content, "html.parser")
@@ -153,7 +153,7 @@ async def extract_reviews(iframe_content) -> list[Review]:
     return parsed_results
 
 
-@alru_cache(ttl=600)
+@alru_cache(ttl=3600)
 async def scrape_properties_url(target_url: str):
     properties_content = []
     async with async_playwright() as pw:
@@ -168,7 +168,7 @@ async def scrape_properties_url(target_url: str):
     return properties_content
 
 
-@alru_cache(ttl=60)
+@alru_cache(ttl=3600)
 async def scrape_reviews_url(target_url: str):
     reviews_content = []
     base_widget_url = f"{base_target_url}/widgets"
@@ -191,7 +191,7 @@ async def scrape_reviews_url(target_url: str):
     return reviews_content
 
 
-@alru_cache(ttl=600)
+@alru_cache(ttl=3600)
 async def extract_paged_reviews(page, review_link_to_visit) -> list[Review]:
     await page.goto(ic(review_link_to_visit))
     page_content = await page.content()
