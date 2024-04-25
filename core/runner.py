@@ -141,7 +141,8 @@ async def scrape_price_url(target_url: str):
     return response_cache.get(ic(request_id), default=None)
 
 
-def extract_reviews(iframe_content) -> list[Review]:
+@alru_cache(ttl=600)
+async def extract_reviews(iframe_content) -> list[Review]:
     parsed_results = []
     soup = BeautifulSoup(iframe_content, "html.parser")
     reviews = soup.find_all("div", {"class": ["review-item"]})
@@ -167,7 +168,7 @@ async def scrape_properties_url(target_url: str):
     return properties_content
 
 
-@alru_cache(ttl=600)
+@alru_cache(ttl=60)
 async def scrape_reviews_url(target_url: str):
     reviews_content = []
     base_widget_url = f"{base_target_url}/widgets"
@@ -183,8 +184,15 @@ async def scrape_reviews_url(target_url: str):
                 page_content = await iframe.content()
                 review_links_to_visit = extract_review_page_links(page_content, base_target_url)
         for review_link_to_visit in set(review_links_to_visit):
-            await page.goto(ic(review_link_to_visit))
-            reviews_content.extend(extract_reviews(await page.content()))
+            reviews_in_target_page = await extract_paged_reviews(page, review_link_to_visit)
+            reviews_content.extend(reviews_in_target_page)
         await browser.close()
         ic(f'Extracted reviews count {len(reviews_content)}')
     return reviews_content
+
+
+@alru_cache(ttl=600)
+async def extract_paged_reviews(page, review_link_to_visit) -> list[Review]:
+    await page.goto(ic(review_link_to_visit))
+    page_content = await page.content()
+    return await extract_reviews(page_content)
