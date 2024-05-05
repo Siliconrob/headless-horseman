@@ -137,6 +137,8 @@ async def direct_properties(target: RequestTarget):
         raise HTTPException(401)
     property_url = ic(fill_in_target_url(target, "properties"))
     response = ic(await scrape_properties_url(property_url))
+    if len(response) == 0:
+        response = ic(await scrape_properties_url(target.target_url))
     return dict(result=response)
 
 
