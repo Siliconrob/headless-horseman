@@ -1,5 +1,7 @@
 import re
 from dataclasses import dataclass, field
+from urllib.parse import urlparse
+
 from bs4 import BeautifulSoup
 from icecream import ic
 
@@ -21,12 +23,19 @@ class Property:
     amenities: list = field(default_factory=list[str])
 
 
+def parse_property_link(extracted_property_link: str, base_url: str):
+    parsed_url = urlparse(extracted_property_link)
+    if parsed_url.scheme not in ["http", "https"]:
+        return f'{base_url}{extracted_property_link}'
+    return extracted_property_link
+
+
 def extract_from_tiles(property_page_tiles, base_url: str) -> list[Property]:
     tile_properties = []
     for property_page_tile in property_page_tiles:
         title = property_page_tile.select('span.h3.media-heading').pop().text
         extracted = Property(title)
-        extracted.property_url = f'{base_url}{property_page_tile.get("href")}'
+        extracted.property_url = parse_property_link(property_page_tile.get("href"), base_url)
         extracted.photo_url = property_page_tile.find("img").get("src")
         extracted.amenities = [z.get("data-original-title") for z in
                                property_page_tile.find_all("span", {"class": ["amenity-list-item"]})]
@@ -94,7 +103,7 @@ def extract_from_list(property_page_list, base_url) -> list[Property]:
             if header is not None:
                 title_link = header.find("a")
                 extracted.title = title_link.text
-                extracted.property_url = f'{base_url}{title_link.get("href")}'
+                extracted.property_url = parse_property_link(title_link.get("href"), base_url)
         extracted.amenities = extract_amenities(description_section)
         extracted_size = extract_size(description_section.find("div", {"class": "amenity-summary-size"}))
         if len(extracted_size) > 0:
