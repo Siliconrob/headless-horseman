@@ -5,8 +5,6 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from icecream import ic
 
-from core.VacationRental import extract_vacation_rental
-
 ic.configureOutput(prefix='|> ')
 
 wait_action = 'networkidle'
@@ -61,7 +59,6 @@ async def extract_property_details_from_tiles(base_url, property_page_tile):
         extracted.full_bathrooms = values[3]
     if len(values) > 4:
         extracted.half_bathrooms = values[4]
-    extracted.rental_details = await extract_vacation_rental(extracted.property_url)
     return extracted
 
 
@@ -127,7 +124,6 @@ async def extract_property_details_from_list(base_url, sections) -> Property:
         extracted.bathrooms = extracted_size[1]
     if len(extracted_size) > 3:
         extracted.sleeps = extracted_size[3]
-    extracted.rental_details = await extract_vacation_rental(extracted.property_url)
     return extracted
 
 

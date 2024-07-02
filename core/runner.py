@@ -13,6 +13,8 @@ from core.Review import Review, parse_review, extract_review_page_links
 from async_lru import alru_cache
 from parse import parse
 
+from core.VacationRental import extract_vacation_rental
+
 response_cache = cachetools.TTLCache(maxsize=32, ttl=30)
 ic.configureOutput(prefix='|> ')
 
@@ -163,6 +165,14 @@ async def scrape_properties_url(target_url: str):
         await page.goto(target_url)
         await page.wait_for_load_state(wait_action)
         properties_content.extend(await extract_paged_properties(page, target_url))
+        for property_element in properties_content:
+            property_url = property_element.property_url
+            if property_url is None or property_url == "":
+                continue
+            property_page = await context.new_page()
+            await property_page.goto(property_url)
+            property_page_contents = await property_page.content()
+            property_element.rental_details = await extract_vacation_rental(property_page_contents)
         await browser.close()
         ic(f'Extracted properties count {len(properties_content)}')
     return properties_content
