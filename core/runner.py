@@ -156,6 +156,27 @@ async def extract_reviews(iframe_content) -> list[Review]:
 
 
 @alru_cache(ttl=3600)
+async def scrape_rental_details_url(target_url: str) -> list[dict]:
+    vacation_rental_details = None
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch(headless=True)
+        context = await browser.new_context()
+        page = await context.new_page()
+        await page.goto(target_url)
+        await page.wait_for_load_state(wait_action)
+        property_url = ic(target_url)
+        if property_url is None or property_url == "":
+            await browser.close()
+            return vacation_rental_details
+        await page.goto(property_url)
+        await page.wait_for_load_state(wait_action)
+        property_page_contents = await page.content()
+        vacation_rental_details = await extract_vacation_rental(property_page_contents)
+        await browser.close()
+    return vacation_rental_details
+
+
+@alru_cache(ttl=3600)
 async def scrape_properties_url(target_url: str):
     properties_content = []
     async with async_playwright() as pw:
@@ -165,15 +186,11 @@ async def scrape_properties_url(target_url: str):
         await page.goto(target_url)
         await page.wait_for_load_state(wait_action)
         properties_content.extend(await extract_paged_properties(page, target_url))
-        for property_element in properties_content:
-            property_url = ic(property_element.property_url)
-            if property_url is None or property_url == "":
-                continue
-            await page.goto(property_url, wait_until='domcontentloaded')
-            property_page_contents = await page.content()
-            property_element.rental_details = await extract_vacation_rental(property_page_contents)
         await browser.close()
         ic(f'Extracted properties count {len(properties_content)}')
+    for property_element in properties_content:
+        property_element.rental_details = await scrape_rental_details_url(property_element.property_url)
+
     return properties_content
 
 
