@@ -169,7 +169,7 @@ async def scrape_properties_url(target_url: str):
             property_url = ic(property_element.property_url)
             if property_url is None or property_url == "":
                 continue
-            await page.goto(property_url)
+            await page.goto(property_url, wait_until='domcontentloaded')
             property_page_contents = await page.content()
             property_element.rental_details = await extract_vacation_rental(property_page_contents)
         await browser.close()
