@@ -166,7 +166,7 @@ async def scrape_properties_url(target_url: str):
         await page.wait_for_load_state(wait_action)
         properties_content.extend(await extract_paged_properties(page, target_url))
         for property_element in properties_content:
-            property_url = property_element.property_url
+            property_url = ic(property_element.property_url)
             if property_url is None or property_url == "":
                 continue
             property_page = await context.new_page()
