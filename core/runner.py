@@ -169,9 +169,8 @@ async def scrape_properties_url(target_url: str):
             property_url = ic(property_element.property_url)
             if property_url is None or property_url == "":
                 continue
-            property_page = await context.new_page()
-            await property_page.goto(property_url)
-            property_page_contents = await property_page.content()
+            await page.goto(property_url)
+            property_page_contents = await page.content()
             property_element.rental_details = await extract_vacation_rental(property_page_contents)
         await browser.close()
         ic(f'Extracted properties count {len(properties_content)}')
