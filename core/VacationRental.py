@@ -2,6 +2,9 @@ import json
 
 from async_lru import alru_cache
 from bs4 import BeautifulSoup
+from icecream import ic
+
+ic.configureOutput(prefix='|> ')
 
 
 @alru_cache(ttl=3600)

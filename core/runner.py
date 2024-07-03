@@ -1,5 +1,8 @@
 import urllib
 import uuid
+import random
+
+import httpx
 import pendulum
 from price_parser import Price
 from bs4 import BeautifulSoup
@@ -13,7 +16,8 @@ from core.Review import Review, parse_review, extract_review_page_links
 from async_lru import alru_cache
 from parse import parse
 
-from core.VacationRental import extract_vacation_rental
+from core.VacationRental import extract_vacation_rental, os_extract_vacation_rental
+from core.agents import user_agent_list
 
 response_cache = cachetools.TTLCache(maxsize=32, ttl=30)
 ic.configureOutput(prefix='|> ')
@@ -155,16 +159,17 @@ async def extract_reviews(iframe_content) -> list[Review]:
     return parsed_results
 
 
-@alru_cache(ttl=3600)
-async def scrape_rental_details_url(page_element, target_url: str) -> list[dict]:
+# @alru_cache(ttl=3600)
+async def scrape_rental_details_url(target_url: str) -> list[dict]:
     vacation_rental_details = None
     property_url = ic(target_url)
     if property_url is None or property_url == "":
         return vacation_rental_details
-    await page_element.goto(property_url)
-    await page_element.wait_for_load_state()
-    property_page_contents = await page_element.content()
-    vacation_rental_details = await extract_vacation_rental(property_page_contents)
+
+    headers = ic({"User-Agent": user_agent_list[random.randint(0, len(user_agent_list) - 1)]})
+    async with httpx.AsyncClient() as client:
+        html = await client.get(ic(target_url), headers=headers)
+        vacation_rental_details = await extract_vacation_rental(html.content)
     return vacation_rental_details
 
 
@@ -179,7 +184,8 @@ async def scrape_properties_url(target_url: str):
         await page.wait_for_load_state(wait_action)
         properties_content.extend(await extract_paged_properties(page, target_url))
         for property_element in properties_content:
-            property_element.rental_details = await scrape_rental_details_url(page, property_element.property_url)
+            # property_element.rental_details = os_extract_vacation_rental(property_element.property_url)
+            property_element.rental_details = await scrape_rental_details_url(property_element.property_url)
         await browser.close()
         ic(f'Extracted properties count {len(properties_content)}')
     return properties_content
