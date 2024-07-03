@@ -168,8 +168,12 @@ async def scrape_rental_details_url(target_url: str) -> list[dict]:
 
     headers = ic({"User-Agent": user_agent_list[random.randint(0, len(user_agent_list) - 1)]})
     async with httpx.AsyncClient() as client:
-        html = await client.get(ic(target_url), headers=headers)
-        vacation_rental_details = await extract_vacation_rental(html.content)
+        try:
+            html = await client.get(ic(target_url), headers=headers)
+            vacation_rental_details = await extract_vacation_rental(html.content)
+        except Exception as error:
+            ic(error)
+
     return vacation_rental_details
 
 
