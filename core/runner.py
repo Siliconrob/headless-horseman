@@ -16,7 +16,7 @@ from core.Review import Review, parse_review, extract_review_page_links
 from async_lru import alru_cache
 from parse import parse
 
-from core.VacationRental import extract_vacation_rental, os_extract_vacation_rental
+from core.VacationRental import extract_vacation_rental
 from core.agents import user_agent_list
 
 response_cache = cachetools.TTLCache(maxsize=32, ttl=30)
@@ -159,7 +159,7 @@ async def extract_reviews(iframe_content) -> list[Review]:
     return parsed_results
 
 
-# @alru_cache(ttl=3600)
+@alru_cache(ttl=3600)
 async def scrape_rental_details_url(target_url: str) -> list[dict]:
     vacation_rental_details = None
     property_url = ic(target_url)
@@ -183,11 +183,11 @@ async def scrape_properties_url(target_url: str):
         await page.goto(target_url)
         await page.wait_for_load_state(wait_action)
         properties_content.extend(await extract_paged_properties(page, target_url))
-        for property_element in properties_content:
-            # property_element.rental_details = os_extract_vacation_rental(property_element.property_url)
-            property_element.rental_details = await scrape_rental_details_url(property_element.property_url)
         await browser.close()
-        ic(f'Extracted properties count {len(properties_content)}')
+    ic(f'Extracted properties count {len(properties_content)}')
+    for property_element in properties_content:
+        property_element.rental_details = await scrape_rental_details_url(property_element.property_url)
+
     return properties_content
 
 
