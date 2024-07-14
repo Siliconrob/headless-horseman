@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException, Form, UploadFile, File
 from urllib.parse import urlparse, urlencode
 from starlette.responses import RedirectResponse, JSONResponse
 from pydantic import BaseModel
-from core.runner import scrape_price_url, scrape_reviews_url, scrape_properties_url
+from core.runner import scrape_price_url, scrape_reviews_url, scrape_properties_url, scrape_availability_url
 from middlewares.exceptionhandler import ExceptionHandlerMiddleware
 from quick_xmltodict import parse
 
@@ -76,6 +76,24 @@ async def convert_file(upload_file: Annotated[UploadFile, File()]):
     ic(contents)
     parsed_xml_dict = parse(contents)
     return dict(result=parsed_xml_dict)
+
+
+@alru_cache(ttl=60)
+@app.get("/get_availability/{property_id}", tags=["Headless"], include_in_schema=True)
+async def get_price(property_id: Annotated[str, "Property ID"], watermark: Annotated[str, "Watermark"] = ""):
+    if os.getenv('API_REQUEST') != watermark:
+        raise HTTPException(401)
+
+    url_request_params = {
+        'property': property_id,
+        'arrival': pendulum.now().isoformat(),
+        'departure': pendulum.now().add(days=1).isoformat(),
+        'adults': 2,
+        'children': 0
+    }
+    target_url = ic(f'https://booking.ownerrez.com/request?{urlencode(url_request_params)}')
+    response = ic(await scrape_availability_url(target_url))
+    return dict(result=response)
 
 
 @alru_cache(ttl=60)

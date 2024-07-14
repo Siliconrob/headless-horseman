@@ -11,6 +11,7 @@ import cachetools
 from icecream import ic
 from urllib.parse import urlparse
 
+from core.Availability import extract_availability
 from core.Property import extract_paged_properties
 from core.Review import Review, parse_review, extract_review_page_links
 from async_lru import alru_cache
@@ -126,6 +127,17 @@ def get_duration(target_url):
     end_date = pendulum.parse(str(query_parts["departure"].pop()), strict=False)
     duration = ic(end_date.diff(start_date))
     return duration
+
+
+async def scrape_availability_url(target_url: str):
+    headers = ic({"User-Agent": user_agent_list[random.randint(0, len(user_agent_list) - 1)]})
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(ic(target_url), headers=headers)
+            return extract_availability(response.content)
+        except Exception as error:
+            ic(error)
+    return None
 
 
 async def scrape_price_url(target_url: str):
