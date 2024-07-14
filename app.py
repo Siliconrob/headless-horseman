@@ -86,8 +86,8 @@ async def get_price(property_id: Annotated[str, "Property ID"], watermark: Annot
 
     url_request_params = {
         'property': property_id,
-        'arrival': pendulum.now().isoformat(),
-        'departure': pendulum.now().add(days=1).isoformat(),
+        'arrival': pendulum.now().date().isoformat(),
+        'departure': pendulum.now().add(days=1).date().isoformat(),
         'adults': 2,
         'children': 0
     }
