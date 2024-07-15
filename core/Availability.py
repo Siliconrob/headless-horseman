@@ -19,12 +19,13 @@ def extract_availability(page_contents: str) -> list:
     scripts = soup.find_all("script", {"type": ["text/javascript"]})
     for script in scripts:
         replacements = {'\r': '', '\n': ''}
-        pattern = '|'.join(replacements.keys())
-        script_text = re.sub(pattern, lambda z: replacements[z.group(0)], script.get_text())
+        script_text = re.sub('|'.join(replacements.keys()), lambda z: replacements[z.group(0)], script.get_text())
         match = re.search(match_date_pattern, script_text, re.IGNORECASE | re.MULTILINE)
         if match is None:
             continue
-        availability_params = ic(match.groups()[0].replace('const bookedDates = ', ''))
+        replace_syntax = {'const': '', 'let': '', 'var': '', 'bookedDates': '', '=': ''}
+        dates_only = re.sub('|'.join(replace_syntax.keys()), lambda z: replace_syntax[z.group(0)], match.groups()[0], re.IGNORECASE)
+        availability_params = ic(dates_only.strip())
         parsed_results.append(compute_availability(availability_params))
 
     return parsed_results
